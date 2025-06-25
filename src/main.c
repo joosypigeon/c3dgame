@@ -1,0 +1,31 @@
+#include "raylib.h"
+#include "render.h"
+#include "physics.h"
+#include "audio.h"
+
+int main(void) {
+    InitWindow(1280, 720, "C Game Engine");
+    InitAudio();
+    InitPhysics();
+    InitRenderer();
+
+    SetTargetFPS(60);
+    while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_SPACE)) {
+            ApplyRandomJumpToAllBodies();
+        }
+        UpdatePhysics();
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        BeginRender();
+        DrawScene();
+        EndRender();
+        EndDrawing();
+    }
+
+    ShutdownRenderer();
+    ShutdownPhysics();
+    ShutdownAudio();
+    CloseWindow();
+    return 0;
+}

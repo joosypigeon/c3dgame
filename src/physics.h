@@ -6,5 +6,7 @@ void UpdatePhysics();
 void ShutdownPhysics();
 Vector3 GetPhysicsBodyPosition(int index);
 void ApplyRandomJumpToAllBodies();
-#define MAX_BODIES 50
+void SetTerrainTriMesh(Mesh *mesh);
+#define CUBE_SIZE 20.0f
+#define MAX_BODIES 2000
 #endif

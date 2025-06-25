@@ -8,6 +8,7 @@ static dJointGroupID contactGroup;
 static dBodyID bodies[MAX_BODIES];
 static dGeomID geoms[MAX_BODIES];
 static dGeomID groundGeom;
+static dGeomID terrainGeom;
 
 typedef struct {
     int id;
@@ -53,7 +54,65 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
     }
 }
 
+// Convert Raylib Mesh to ODE TriMesh
+dGeomID CreateODETriMeshFromRaylibMesh(Mesh *mesh, dSpaceID space, dTriMeshDataID *outTriData)
+{
+    // Copy Raylib mesh vertex data (assumed layout: x,y,z x,y,z ...)
+    int vertexCount = mesh->vertexCount;
+    float *vertices = malloc(sizeof(float) * vertexCount * 3);
+    for (int i = 0; i < vertexCount * 3; i++) {
+        vertices[i] = mesh->vertices[i];
+    }
+
+    // Copy and widen indices from ushort to int
+    int triangleCount = mesh->triangleCount;
+    int *indices = malloc(sizeof(int) * triangleCount * 3);
+    for (int i = 0; i < triangleCount * 3; i++) {
+        indices[i] = mesh->indices[i];
+    }
+
+    // Create and build trimesh data
+    dTriMeshDataID triData = dGeomTriMeshDataCreate();
+    dGeomTriMeshDataBuildSingle(triData,
+        vertices,                  // Vertex array
+        3 * sizeof(float),         // Stride
+        vertexCount,
+        indices,                   // Index array
+        triangleCount * 3,
+        3 * sizeof(int)            // Stride
+    );
+
+    // Store the trimesh data if caller wants to keep it
+    if (outTriData) *outTriData = triData;
+
+    // Create and return the trimesh geometry
+    dGeomID geom = dCreateTriMesh(space, triData, NULL, NULL, NULL);
+    return geom;
+}
+
+void SetTerrainTriMesh(Mesh *mesh) {
+    terrainGeom = CreateODETriMeshFromRaylibMesh(mesh, space, NULL);
+    dGeomSetData(terrainGeom, "terrain");
+}
+
+int SCREEN_WIDTH = -1;
+int SCREEN_HEIGHT = -1;
+float HALF_SCREEN_WIDTH = -1.0f;
+float HALF_SCREEN_HEIGHT = -1.0f;
+
 void InitPhysics() {
+    // Get the primary monitor's resolution before window creation
+    size_t CELL_SIZE = 50;
+    int monitor = GetCurrentMonitor();
+    SCREEN_HEIGHT = GetMonitorHeight(monitor);
+    SCREEN_WIDTH = GetMonitorWidth(monitor);
+    printf("Monitor %d: %d x %d\n", monitor, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SCREEN_WIDTH = (SCREEN_WIDTH/CELL_SIZE)*CELL_SIZE;
+    SCREEN_HEIGHT = (SCREEN_HEIGHT/CELL_SIZE)*CELL_SIZE;
+    printf("Monitor %d: %d x %d\n", monitor, SCREEN_WIDTH, SCREEN_HEIGHT);
+    HALF_SCREEN_WIDTH = SCREEN_WIDTH / 2.0f;
+    HALF_SCREEN_HEIGHT = SCREEN_HEIGHT / 2.0f;
+
     dInitODE();
     world = dWorldCreate();
     space = dHashSpaceCreate(0);
@@ -62,17 +121,21 @@ void InitPhysics() {
 
     // Ground plane
     groundGeom = dCreatePlane(space, 0, 1, 0, 0);
-
+    printf("Ground plane created\n");
+    printf("SCREEN_WIDTH: %d, SCREEN_HEIGHT: %d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
     for (int i = 0; i < MAX_BODIES; i++) {
         objects[i].id = i;
         objects[i].body = dBodyCreate(world);
-        objects[i].geom = dCreateBox(space, 1.0, 1.0, 1.0);
+        objects[i].geom = dCreateBox(space, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
         dGeomSetBody(objects[i].geom, objects[i].body);
 
         dMass m;
-        dMassSetBox(&m, 1.0, 1.0, 1.0, 1.0);
+        dMassSetBox(&m, 1.0, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
         dBodySetMass(objects[i].body, &m);
-        dBodySetPosition(objects[i].body, (i % 4) * 2.0 - 4.0, 10 + (i / 4) * 2.0, 0);
+        dBodySetPosition(objects[i].body, 
+                         GetRandomValue(-HALF_SCREEN_HEIGHT, HALF_SCREEN_HEIGHT),
+                         GetRandomValue(450, 500),  // Start above ground
+                         GetRandomValue(-HALF_SCREEN_WIDTH, HALF_SCREEN_WIDTH));
 
         dBodySetData(objects[i].body, &objects[i]);
     }
@@ -94,17 +157,17 @@ void UpdatePhysics() {
 
 void ApplyRandomJumpToAllBodies() {
     for (int i = 0; i < MAX_BODIES; i++) {
-        float vx = GetRandomValue(-200, 200) / 100.0f;  // [-2.0f, 2.0f]
-        float vy = 8.0f + GetRandomValue(0, 100) / 100.0f;  // [8.0f, 9.0f]
-        float vz = GetRandomValue(-200, 200) / 100.0f;  // [-2.0f, 2.0f]
+        float vx = GetRandomValue(-200, 200);
+        float vy = 8.0f + GetRandomValue(0, 100);
+        float vz = GetRandomValue(-200, 200);  //
         dBodySetLinearVel(objects[i].body, vx, vy, vz);
     }
 }
 
 void ShutdownPhysics() {
     for (int i = 0; i < MAX_BODIES; i++) {
-        dGeomDestroy(geoms[i]);
-        dBodyDestroy(bodies[i]);
+        if (objects[i].geom) dGeomDestroy(objects[i].geom);
+        if (objects[i].body) dBodyDestroy(objects[i].body);
     }
     dJointGroupDestroy(contactGroup);
     dSpaceDestroy(space);

@@ -5,11 +5,11 @@ void UpdateCameraManual(Camera3D *camera)
 {
     static float cameraYaw = PI / 4.0f;
     static float cameraPitch = PI / 4.0f;
-    static float cameraDistance = 30.0f;
+    static float cameraDistance = 2000.0f;
     static Vector3 target = { 0.0f, 0.0f, 0.0f };
 
     float wheel = GetMouseWheelMove();
-    cameraDistance -= wheel * 5.0f;
+    cameraDistance -= wheel * 50.0f;
     if (cameraDistance < 10.0f) cameraDistance = 10.0f;
 
     if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {

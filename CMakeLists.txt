@@ -6,7 +6,7 @@
 # │   ├── main.c
 # │   ├── render.c / render.h     # Raylib or OpenGL rendering
 # │   ├── physics.c / physics.h   # ODE physics integration
-# │   ├── audio.c / audio.h       # miniaudio or OpenAL
+# │   ├── audio.c / audio.h       # Raylib audio
 # │   ├── assets/                 # Models, textures, sounds
 # ├── include/                   # Headers for external libraries (if needed)
 # ├── libs/                      # External single-file libraries or submodules
@@ -31,9 +31,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 add_subdirectory(libs/raylib)
 
-# Use system-installed ODE instead of local subdirectory
+# Use system-installed ODE
 find_library(ODE_LIBRARY ode REQUIRED)
 include_directories(/usr/include/ode)
+
+# Add OpenMP
+find_package(OpenMP REQUIRED)
 
 include_directories(libs/raylib/src)
 include_directories(include libs)
@@ -41,4 +44,15 @@ include_directories(include libs)
 file(GLOB SRC src/*.c)
 
 add_executable(game ${SRC})
-target_link_libraries(game raylib ${ODE_LIBRARY} m pthread dl rt X11)
+target_link_libraries(game
+    PUBLIC
+    raylib
+    ${ODE_LIBRARY}
+    OpenMP::OpenMP_C
+    m
+    pthread
+    dl
+    rt
+    X11
+)
+

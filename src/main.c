@@ -12,9 +12,6 @@ int main(void) {
 
     SetTargetFPS(60);
     while (!WindowShouldClose()) {
-        if (IsKeyPressed(KEY_SPACE)) {
-            ApplyRandomJumpToAllBodies();
-        }
         UpdatePhysics();
         BeginDrawing();
         ClearBackground(RAYWHITE);

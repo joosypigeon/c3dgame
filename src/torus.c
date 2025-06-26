@@ -96,7 +96,7 @@ float **get_heightmap(const char *filename) {
                 6, 2.0f, 0.5f, fn
             );
 
-            warped_noise = powf(warped_noise, 1.5f);  // boost height contrast
+            warped_noise = powf(warped_noise, 4.0f);  // boost height contrast
             assert(warped_noise >= 0.0f && warped_noise <= 1.0f); // Ensure noise is in [0, 1]
             heightmap[v][u] = warped_noise;
         }

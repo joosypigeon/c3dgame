@@ -2,6 +2,8 @@
 #include "physics.h"
 #include "audio.h"
 
+
+
 static dWorldID world;
 static dSpaceID space;
 static dJointGroupID contactGroup;
@@ -29,27 +31,6 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
     contact.surface.bounce_vel = 0.1;
 
     if (dCollide(o1, o2, 1, &contact.geom, sizeof(dContact))) {
-        /*
-        // --- Impact Sound Logic ---
-        if (b1) {
-            PhysicsObject *obj = (PhysicsObject *)dBodyGetData(b1);
-            float speed = sqrtf(
-                obj->lastVelocity[0] * obj->lastVelocity[0] +
-                obj->lastVelocity[1] * obj->lastVelocity[1] +
-                obj->lastVelocity[2] * obj->lastVelocity[2]
-            );
-            if (speed > 50.0f) PlayImpactSound();
-        }
-        if (b2) {
-            PhysicsObject *obj = (PhysicsObject *)dBodyGetData(b2);
-            float speed = sqrtf(
-                obj->lastVelocity[0] * obj->lastVelocity[0] +
-                obj->lastVelocity[1] * obj->lastVelocity[1] +
-                obj->lastVelocity[2] * obj->lastVelocity[2]
-            );
-            if (speed > 50.0f) PlayImpactSound();
-        }*/
-
         dJointID c = dJointCreateContact(world, contactGroup, &contact);
         dJointAttach(c, b1, b2);
     }
@@ -156,13 +137,17 @@ void UpdatePhysics() {
         objects[i].lastVelocity[1] = v[1];
         objects[i].lastVelocity[2] = v[2];
     }
+
+    if (IsKeyPressed(KEY_SPACE)) {
+        ApplyRandomJumpToAllBodies();
+    }
 }
 
 void ApplyRandomJumpToAllBodies() {
     for (int i = 0; i < MAX_BODIES; i++) {
-        float vx = GetRandomValue(-100, 100);
-        float vy = 8.0f + GetRandomValue(0, 100);
-        float vz = GetRandomValue(-100, 100);  //
+        float vx = GetRandomValue(-10, 10);
+        float vy = 50.0f + GetRandomValue(0, 100);
+        float vz = GetRandomValue(-10, 10);  //
         dBodySetLinearVel(objects[i].body, vx, vy, vz);
     }
 }

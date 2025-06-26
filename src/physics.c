@@ -5,8 +5,6 @@
 static dWorldID world;
 static dSpaceID space;
 static dJointGroupID contactGroup;
-static dBodyID bodies[MAX_BODIES];
-static dGeomID geoms[MAX_BODIES];
 static dGeomID groundGeom;
 static dGeomID terrainGeom;
 
@@ -15,6 +13,7 @@ typedef struct {
     dBodyID body;
     dGeomID geom;
     dVector3 lastVelocity;
+    Model model;  // Optional: store model for rendering
 } PhysicsObject;
 
 static PhysicsObject objects[MAX_BODIES];
@@ -24,12 +23,13 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
     dBodyID b2 = dGeomGetBody(o2);
 
     dContact contact;
-    contact.surface.mode = dContactBounce;
+    contact.surface.mode = dContactBounce | dContactApprox1;
     contact.surface.mu = dInfinity;
     contact.surface.bounce = 0.2;
     contact.surface.bounce_vel = 0.1;
 
     if (dCollide(o1, o2, 1, &contact.geom, sizeof(dContact))) {
+        /*
         // --- Impact Sound Logic ---
         if (b1) {
             PhysicsObject *obj = (PhysicsObject *)dBodyGetData(b1);
@@ -38,7 +38,7 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
                 obj->lastVelocity[1] * obj->lastVelocity[1] +
                 obj->lastVelocity[2] * obj->lastVelocity[2]
             );
-            if (speed > 5.0f) PlayImpactSound();
+            if (speed > 50.0f) PlayImpactSound();
         }
         if (b2) {
             PhysicsObject *obj = (PhysicsObject *)dBodyGetData(b2);
@@ -47,8 +47,9 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
                 obj->lastVelocity[1] * obj->lastVelocity[1] +
                 obj->lastVelocity[2] * obj->lastVelocity[2]
             );
-            if (speed > 1.0f) PlayImpactSound();
-        }
+            if (speed > 50.0f) PlayImpactSound();
+        }*/
+
         dJointID c = dJointCreateContact(world, contactGroup, &contact);
         dJointAttach(c, b1, b2);
     }
@@ -138,6 +139,8 @@ void InitPhysics() {
                          GetRandomValue(-HALF_SCREEN_WIDTH, HALF_SCREEN_WIDTH));
 
         dBodySetData(objects[i].body, &objects[i]);
+        Mesh mesh = GenMeshCube(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+        objects[i].model = LoadModelFromMesh(mesh);
     }
 }
 
@@ -157,9 +160,9 @@ void UpdatePhysics() {
 
 void ApplyRandomJumpToAllBodies() {
     for (int i = 0; i < MAX_BODIES; i++) {
-        float vx = GetRandomValue(-200, 200);
+        float vx = GetRandomValue(-100, 100);
         float vy = 8.0f + GetRandomValue(0, 100);
-        float vz = GetRandomValue(-200, 200);  //
+        float vz = GetRandomValue(-100, 100);  //
         dBodySetLinearVel(objects[i].body, vx, vy, vz);
     }
 }
@@ -180,4 +183,60 @@ Vector3 GetPhysicsBodyPosition(int index) {
 
     const dReal *p = dBodyGetPosition(objects[index].body);
     return (Vector3){ (float)p[0], (float)p[1], (float)p[2] };
+}
+
+Quaternion QuaternionFromODE(const dReal *R)
+{
+    Quaternion q;
+    float trace = R[0] + R[5] + R[10]; // R[0], R[5], R[10] are diagonal
+
+    if (trace > 0) {
+        float s = sqrtf(trace + 1.0f) * 2.0f;
+        q.w = 0.25f * s;
+        q.x = (R[9] - R[6]) / s;
+        q.y = (R[2] - R[8]) / s;
+        q.z = (R[4] - R[1]) / s;
+    } else if ((R[0] > R[5]) && (R[0] > R[10])) {
+        float s = sqrtf(1.0f + R[0] - R[5] - R[10]) * 2.0f;
+        q.w = (R[9] - R[6]) / s;
+        q.x = 0.25f * s;
+        q.y = (R[1] + R[4]) / s;
+        q.z = (R[2] + R[8]) / s;
+    } else if (R[5] > R[10]) {
+        float s = sqrtf(1.0f + R[5] - R[0] - R[10]) * 2.0f;
+        q.w = (R[2] - R[8]) / s;
+        q.x = (R[1] + R[4]) / s;
+        q.y = 0.25f * s;
+        q.z = (R[6] + R[9]) / s;
+    } else {
+        float s = sqrtf(1.0f + R[10] - R[0] - R[5]) * 2.0f;
+        q.w = (R[4] - R[1]) / s;
+        q.x = (R[2] + R[8]) / s;
+        q.y = (R[6] + R[9]) / s;
+        q.z = 0.25f * s;
+    }
+
+    return q;
+}
+
+void GetPhysicsBodyAxisAngle(int index, Vector3 *axis, float *angle) {
+    if (index < 0 || index >= MAX_BODIES) {
+        *angle = 0.0f;
+        *axis = (Vector3){0};
+        return;
+    }
+
+    const dReal *R = dBodyGetRotation(objects[index].body);
+    Quaternion q = QuaternionFromODE(R);
+    QuaternionToAxisAngle(q, axis, angle);
+}
+Model GetPhysicsBodyModel(int index) {
+    if (index < 0 || index >= MAX_BODIES) return (Model){0};
+    return objects[index].model;
+}
+
+void AttachShaderToPhysicsBodies(Shader shader) {
+    for (int i = 0; i < MAX_BODIES; i++) {
+        objects[i].model.materials[0].shader = shader;
+    }
 }

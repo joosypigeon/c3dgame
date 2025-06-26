@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "raymath.h"
 #include "render.h"
 #include "physics.h"
 #include "camera.h"
@@ -45,6 +46,8 @@ void InitRenderer() {
     GenMeshTangents(&terrain_mesh);
     terrain = LoadModelFromMesh(terrain_mesh);
     terrain.materials[0].shader = shader;
+
+    AttachShaderToPhysicsBodies(shader);
 }
 
 void BeginRender() {
@@ -72,14 +75,19 @@ void BeginRender() {
 
 void DrawScene() {
     DrawModel(terrain, Vector3Zero(), 1.0f, WHITE);
-    DrawGrid(10, 1.0f);
+    DrawGrid(1000, 10.0f);
     DrawCube((Vector3){0.0f, -0.5f, 0.0f}, 10.0f, 1.0f, 10.0f, LIGHTGRAY); // Ground
     DrawCubeWires((Vector3){0.0f, -0.5f, 0.0f}, 10.0f, 1.0f, 10.0f, DARKGRAY);
 
     for (int i = 0; i < MAX_BODIES; i++) {
         Vector3 pos = GetPhysicsBodyPosition(i);
-        DrawCube(pos, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, RED);
-        DrawCubeWires(pos, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, BLACK);
+        float angle;
+        Vector3 axis;
+        GetPhysicsBodyAxisAngle(i, &axis, &angle);
+        Model model = GetPhysicsBodyModel(i);
+        float degrees = angle * RAD2DEG;
+
+        DrawModelEx(model, pos, axis, degrees, (Vector3){1.0f, 1.0f, 1.0f}, RED);
     }
 
     // Draw spheres to show where the lights are
@@ -92,6 +100,7 @@ void DrawScene() {
 
 void EndRender() {
     EndMode3D();
+    DrawFPS(SCREEN_WIDTH - 100, 10);
 }
 
 void ShutdownRenderer() {

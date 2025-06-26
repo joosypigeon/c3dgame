@@ -4,7 +4,8 @@
 #include "audio.h"
 
 int main(void) {
-    InitWindow(1280, 720, "C Game Engine");
+    SetConfigFlags(FLAG_FULLSCREEN_MODE);
+    InitWindow(0, 0, "C Game Engine");
     InitAudio();
     InitPhysics();
     InitRenderer();

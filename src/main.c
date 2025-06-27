@@ -4,8 +4,9 @@
 #include "audio.h"
 
 int main(void) {
-    SetConfigFlags(FLAG_FULLSCREEN_MODE);
-    InitWindow(0, 0, "C Game Engine");
+    //SetConfigFlags(FLAG_FULLSCREEN_MODE);
+
+    InitWindow(1200, 800, "Raylib Physics Example");
     InitAudio();
     InitPhysics();
     InitRenderer();

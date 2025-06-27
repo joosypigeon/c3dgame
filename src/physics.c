@@ -1,7 +1,8 @@
 #include <ode/ode.h>
 #include "physics.h"
 #include "audio.h"
-
+#include <stdio.h>
+#include <stdint.h>
 
 
 static dWorldID world;
@@ -21,6 +22,7 @@ typedef struct {
 static PhysicsObject objects[MAX_BODIES];
 
 static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
+    (void)data;  // Unused parameter
     dBodyID b1 = dGeomGetBody(o1);
     dBodyID b2 = dGeomGetBody(o2);
 
@@ -77,23 +79,28 @@ void SetTerrainTriMesh(Mesh *mesh) {
     dGeomSetData(terrainGeom, "terrain");
 }
 
-int SCREEN_WIDTH = -1;
-int SCREEN_HEIGHT = -1;
+size_t SCREEN_WIDTH = SIZE_MAX;
+size_t SCREEN_HEIGHT = SIZE_MAX;
 float HALF_SCREEN_WIDTH = -1.0f;
 float HALF_SCREEN_HEIGHT = -1.0f;
+
+size_t MONITOR_WIDTH = SIZE_MAX;
+size_t MONITOR_HEIGHT = SIZE_MAX;
+float HALF_MONITOR_WIDTH = -1.0f;
+float HALF_MONITOR_HEIGHT = -1.0f;
 
 void InitPhysics() {
     // Get the primary monitor's resolution before window creation
     size_t CELL_SIZE = 50;
     int monitor = GetCurrentMonitor();
-    SCREEN_HEIGHT = GetMonitorHeight(monitor);
-    SCREEN_WIDTH = GetMonitorWidth(monitor);
-    printf("Monitor %d: %d x %d\n", monitor, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SCREEN_WIDTH = (SCREEN_WIDTH/CELL_SIZE)*CELL_SIZE;
-    SCREEN_HEIGHT = (SCREEN_HEIGHT/CELL_SIZE)*CELL_SIZE;
-    printf("Monitor %d: %d x %d\n", monitor, SCREEN_WIDTH, SCREEN_HEIGHT);
-    HALF_SCREEN_WIDTH = SCREEN_WIDTH / 2.0f;
-    HALF_SCREEN_HEIGHT = SCREEN_HEIGHT / 2.0f;
+    MONITOR_HEIGHT = GetMonitorHeight(monitor);
+    MONITOR_WIDTH = GetMonitorWidth(monitor);
+    printf("Monitor %d: %zu x %zu\n", monitor, MONITOR_WIDTH, MONITOR_HEIGHT);
+    MONITOR_WIDTH = (MONITOR_WIDTH/CELL_SIZE)*CELL_SIZE;
+    MONITOR_HEIGHT = (MONITOR_HEIGHT/CELL_SIZE)*CELL_SIZE;
+    printf("Monitor %d: %zu x %zu\n", monitor, MONITOR_WIDTH, MONITOR_HEIGHT);
+    HALF_MONITOR_WIDTH = MONITOR_WIDTH / 2.0f;
+    HALF_MONITOR_HEIGHT = MONITOR_HEIGHT / 2.0f;
 
     dInitODE();
     world = dWorldCreate();
@@ -104,7 +111,7 @@ void InitPhysics() {
     // Ground plane
     groundGeom = dCreatePlane(space, 0, 1, 0, 0);
     printf("Ground plane created\n");
-    printf("SCREEN_WIDTH: %d, SCREEN_HEIGHT: %d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
+    printf("MONITOR_WIDTH: %zu, MONITOR_HEIGHT: %zu\n", MONITOR_WIDTH, MONITOR_HEIGHT);
     for (int i = 0; i < MAX_BODIES; i++) {
         objects[i].id = i;
         objects[i].body = dBodyCreate(world);
@@ -115,14 +122,17 @@ void InitPhysics() {
         dMassSetBox(&m, 1.0, CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
         dBodySetMass(objects[i].body, &m);
         dBodySetPosition(objects[i].body, 
-                         GetRandomValue(-HALF_SCREEN_HEIGHT, HALF_SCREEN_HEIGHT),
+                         GetRandomValue(-HALF_MONITOR_HEIGHT, HALF_MONITOR_HEIGHT),
                          GetRandomValue(450, 500),  // Start above ground
-                         GetRandomValue(-HALF_SCREEN_WIDTH, HALF_SCREEN_WIDTH));
+                         GetRandomValue(-HALF_MONITOR_WIDTH, HALF_MONITOR_WIDTH));
 
         dBodySetData(objects[i].body, &objects[i]);
         Mesh mesh = GenMeshCube(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
         objects[i].model = LoadModelFromMesh(mesh);
     }
+    SCREEN_HEIGHT = GetScreenHeight();
+    SCREEN_WIDTH = GetScreenWidth();
+    printf("SCREEN_WIDTH: %zu, SCREEN_HEIGHT: %zu\n", SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 void UpdatePhysics() {

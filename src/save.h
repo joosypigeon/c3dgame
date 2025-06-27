@@ -18,7 +18,7 @@
 
 bool heightmap_exists(const char *filename);
 void save_heightmap(const char *filename, float **heightmap, int rows, int cols);
-float **load_matrix(const char *filename, int *out_rows, int *out_cols);
+float **load_matrix(const char *filename, size_t *out_rows, size_t *out_cols);
 char *build_fullpath(const char *folder1, const char *folder2, const char *filename);
 
 #endif // SAVE_H

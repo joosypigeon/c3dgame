@@ -80,7 +80,7 @@ void save_heightmap(const char *filename, float **heightmap, int rows, int cols)
 }
 
 // Function to load a matrix from a binary file
-float **load_matrix(const char *filename, int *out_rows, int *out_cols) {
+float **load_matrix(const char *filename, size_t *out_rows, size_t *out_cols) {
     printf("load_matrix: Loading matrix from file: %s\n", filename);
     FILE *f = fopen(filename, "rb");
     if (!f) {

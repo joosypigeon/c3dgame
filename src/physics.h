@@ -12,5 +12,5 @@ void ApplyRandomJumpToAllBodies();
 void SetTerrainTriMesh(Mesh *mesh);
 void AttachShaderToPhysicsBodies(Shader shader);
 #define CUBE_SIZE 40.0f
-#define MAX_BODIES 1000
+#define MAX_BODIES 100
 #endif

@@ -39,13 +39,13 @@ void InitRenderer() {
     SetShaderValue(shader, ambientLoc, (float[4]){ 0.1f, 0.1f, 0.1f, 1.0f }, SHADER_UNIFORM_VEC4);
 
     // Create lights
-    lights[0] = CreateLight(LIGHT_POINT, (Vector3){ -HALF_SCREEN_WIDTH, 200, -HALF_SCREEN_HEIGHT }, Vector3Zero(), YELLOW, shader);
-    lights[1] = CreateLight(LIGHT_POINT, (Vector3){ HALF_SCREEN_WIDTH, 200, HALF_SCREEN_HEIGHT }, Vector3Zero(), RED, shader);
-    lights[2] = CreateLight(LIGHT_POINT, (Vector3){ -HALF_SCREEN_WIDTH, 200, HALF_SCREEN_HEIGHT }, Vector3Zero(), GREEN, shader);
-    lights[3] = CreateLight(LIGHT_POINT, (Vector3){ HALF_SCREEN_WIDTH, 200, -HALF_SCREEN_HEIGHT }, Vector3Zero(), BLUE, shader);
+    lights[0] = CreateLight(LIGHT_POINT, (Vector3){ -HALF_MONITOR_WIDTH, 200, -HALF_MONITOR_HEIGHT }, Vector3Zero(), YELLOW, shader);
+    lights[1] = CreateLight(LIGHT_POINT, (Vector3){ HALF_MONITOR_WIDTH, 200, HALF_MONITOR_HEIGHT }, Vector3Zero(), RED, shader);
+    lights[2] = CreateLight(LIGHT_POINT, (Vector3){ -HALF_MONITOR_WIDTH, 200, HALF_MONITOR_HEIGHT }, Vector3Zero(), GREEN, shader);
+    lights[3] = CreateLight(LIGHT_POINT, (Vector3){ HALF_MONITOR_WIDTH, 200, -HALF_MONITOR_HEIGHT }, Vector3Zero(), BLUE, shader);
 
-    float R = SCREEN_WIDTH / (2.0f * PI);
-    float r = SCREEN_HEIGHT / (2.0f * PI);
+    float R = MONITOR_WIDTH / (2.0f * PI);
+    float r = MONITOR_HEIGHT / (2.0f * PI);
     SetTorusDimensions(R, r);
     Mesh terrain_mesh = MyGenFlatTorusMesh(TORUS_MAJOR_SEGMENTS, TORUS_MINOR_SEGMENTS);
     SetTerrainTriMesh(&terrain_mesh);
@@ -100,8 +100,6 @@ void BeginRender() {
 void DrawScene() {
     DrawModel(terrain, Vector3Zero(), 1.0f, WHITE);
     DrawGrid(1000, 10.0f);
-    DrawCube((Vector3){0.0f, -0.5f, 0.0f}, 10.0f, 1.0f, 10.0f, LIGHTGRAY); // Ground
-    DrawCubeWires((Vector3){0.0f, -0.5f, 0.0f}, 10.0f, 1.0f, 10.0f, DARKGRAY);
 
     for (int i = 0; i < MAX_BODIES; i++) {
         Vector3 pos = GetPhysicsBodyPosition(i);

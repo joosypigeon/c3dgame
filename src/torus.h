@@ -4,15 +4,21 @@
 #include "raylib.h"
 #include "raymath.h"
 #include <math.h>
+#include <stdio.h>
 
-extern int SCREEN_WIDTH;
-extern int SCREEN_HEIGHT;
+extern size_t SCREEN_WIDTH;
+extern size_t SCREEN_HEIGHT;
 extern float HALF_SCREEN_WIDTH;
 extern float HALF_SCREEN_HEIGHT;
 
+extern size_t MONITOR_WIDTH;
+extern size_t MONITOR_HEIGHT;
+extern float HALF_MONITOR_WIDTH;
+extern float HALF_MONITOR_HEIGHT;
+
 void SetTorusDimensions(float major, float minor);
-Mesh MyGenTorusMesh(int rings, int sides);
-Mesh MyGenFlatTorusMesh(int rings, int sides);
+Mesh MyGenTorusMesh(size_t rings, size_t sides);
+Mesh MyGenFlatTorusMesh(size_t rings, size_t sides);
 
 Vector3 get_torus_position(float u, float v);
 Vector3 get_torus_normal(float u, float v);

@@ -33,25 +33,25 @@ void SetTorusDimensions(float major, float minor) {
 float **get_heightmap(const char *filename) {
     float **heightmap = NULL;
     if(heightmap_exists(filename)) {
-        int rows = 0, cols = 0;
+        size_t rows = 0, cols = 0;
         char *fullpath = build_fullpath(S_RESOURCES, S_HEIGHTMAPS, filename);
         heightmap = load_matrix(fullpath, &rows, &cols);
         assert(heightmap != NULL && rows > 0 && cols > 0);
-        assert(rows == SCREEN_HEIGHT && cols == SCREEN_WIDTH);
+        assert(rows == MONITOR_HEIGHT && cols == MONITOR_WIDTH);
         printf("Heightmap loaded from %s\n", filename);
         return heightmap;
     } 
     printf("Heightmap does not exist at %s, generating new one.\n", filename);
-    heightmap = malloc(SCREEN_HEIGHT * sizeof(float *));
-    for (int i = 0; i < SCREEN_HEIGHT; i++) {
-        heightmap[i] = malloc(SCREEN_WIDTH * sizeof(float));
+    heightmap = malloc(MONITOR_HEIGHT * sizeof(float *));
+    for (size_t i = 0; i < MONITOR_HEIGHT; i++) {
+        heightmap[i] = malloc(MONITOR_WIDTH * sizeof(float));
     }
 
     perlin_init(42);  // consistent seed
 
     float scale = 0.005f;
     printf("Generating heightmap with scale: %f\n", scale);
-    printf("SCREEN_WIDTH: %d, SCREEN_HEIGHT: %d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
+    printf("MONITOR_WIDTH: %zu, MONITOR_HEIGHT: %zu\n", MONITOR_WIDTH, MONITOR_HEIGHT);
     printf("R: %f, r: %f\n", R, r);
     NoiseType noiseType = NOISE_PERLIN;  // Change this to switch noise types
     NoiseFunction4D fn = NULL;
@@ -73,12 +73,12 @@ float **get_heightmap(const char *filename) {
     }
 
     #pragma omp parallel for schedule(static)
-    for (int v = 0; v < SCREEN_HEIGHT; v++) {
-        for (int u = 0; u < SCREEN_WIDTH; u++) {
-            float nx = R * cos(u * 2.0f * PI / SCREEN_WIDTH) * scale;
-            float ny = R * sin(u * 2.0f * PI / SCREEN_WIDTH) * scale;
-            float nz = r * cos(v * 2.0f * PI / SCREEN_HEIGHT) * scale;
-            float nw = r * sin(v * 2.0f * PI / SCREEN_HEIGHT) * scale;
+    for (size_t v = 0; v < MONITOR_HEIGHT; v++) {
+        for (size_t u = 0; u < MONITOR_WIDTH; u++) {
+            float nx = R * cos(u * 2.0f * PI / MONITOR_WIDTH) * scale;
+            float ny = R * sin(u * 2.0f * PI / MONITOR_WIDTH) * scale;
+            float nz = r * cos(v * 2.0f * PI / MONITOR_HEIGHT) * scale;
+            float nw = r * sin(v * 2.0f * PI / MONITOR_HEIGHT) * scale;
 
             const float disp_offset = 0.1f;
             const float displacement_strength = 1.0f;
@@ -101,20 +101,20 @@ float **get_heightmap(const char *filename) {
             heightmap[v][u] = warped_noise;
         }
     }
-    printf("Heightmap generated with dimensions: %d x %d\n", SCREEN_WIDTH, SCREEN_HEIGHT);
+    printf("Heightmap generated with dimensions: %zu x %zu\n", MONITOR_WIDTH, MONITOR_HEIGHT);
     return heightmap;
 }
 
 // Generates a torus mesh with the specified number of rings and sides.
-Mesh MyGenTorusMesh(int rings, int sides) {
-    unsigned char **image = malloc(SCREEN_HEIGHT * sizeof(unsigned char *));
+Mesh MyGenTorusMesh(size_t rings, size_t sides) {
+    unsigned char **image = malloc(MONITOR_HEIGHT * sizeof(unsigned char *));
     if (!image) {
         perror("malloc failed");
         exit(1);
     }
 
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        image[y] = malloc(SCREEN_WIDTH * sizeof(unsigned char));
+    for (size_t y = 0; y < MONITOR_HEIGHT; y++) {
+        image[y] = malloc(MONITOR_WIDTH * sizeof(unsigned char));
         if (!image[y]) {
             perror("malloc failed");
             exit(1);
@@ -125,8 +125,8 @@ Mesh MyGenTorusMesh(int rings, int sides) {
 
     float min = FLT_MIN;
     float max = -FLT_MAX;
-    for (int v = 0; v < SCREEN_HEIGHT; v++) {
-        for (int u = 0; u < SCREEN_WIDTH; u++) {
+    for (size_t v = 0; v < MONITOR_HEIGHT; v++) {
+        for (size_t u = 0; u < MONITOR_WIDTH; u++) {
             float height = heightmap[v][u];
             assert(height >= 0.0f && height <= 1.0f); // Ensure noise is in [0, 1]
             if (height < min) min = height;
@@ -142,9 +142,9 @@ Mesh MyGenTorusMesh(int rings, int sides) {
         exit(1);
     }
 
-    fprintf(f, "P5\n%d %d\n255\n", SCREEN_WIDTH, SCREEN_HEIGHT);  // P5 = binary greyscale
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        if (fwrite(image[y], sizeof(unsigned char), SCREEN_WIDTH, f) != SCREEN_WIDTH) {
+    fprintf(f, "P5\n%zu %zu\n255\n", MONITOR_WIDTH, MONITOR_HEIGHT);  // P5 = binary greyscale
+    for (size_t y = 0; y < MONITOR_HEIGHT; y++) {
+        if (fwrite(image[y], sizeof(unsigned char), MONITOR_WIDTH, f) != MONITOR_WIDTH) {
             perror("Error writing image data");
             fclose(f);
             exit(1);
@@ -155,7 +155,7 @@ Mesh MyGenTorusMesh(int rings, int sides) {
     printf("Heightmap written to heightmap_T.pgm\n");
 
     // Free the image memory
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    for (size_t y = 0; y < MONITOR_HEIGHT; y++) {
         free(image[y]);
     }
     free(image);
@@ -169,20 +169,20 @@ Mesh MyGenTorusMesh(int rings, int sides) {
     // 1. Allocate vertex and normal grids
     Vector3 **vertexGrid = MemAlloc(rings * sizeof(Vector3 *));
     Vector3 **normalGrid = MemAlloc(rings * sizeof(Vector3 *));
-    for (int i = 0; i < rings; i++) {
+    for (size_t i = 0; i < rings; i++) {
         vertexGrid[i] = MemAlloc(sides * sizeof(Vector3));
         normalGrid[i] = MemAlloc(sides * sizeof(Vector3));
-        for (int j = 0; j < sides; j++) {
+        for (size_t j = 0; j < sides; j++) {
             normalGrid[i][j] = (Vector3){0.0f, 0.0f, 0.0f};
         }
     }
 
     // 2. Fill vertexGrid with positions (and optionally sample height)
-    for (int i = 0; i < rings; i++) {
+    for (size_t i = 0; i < rings; i++) {
         float theta = (float)i / rings * 2.0f * PI;
         float cosTheta = cosf(theta);
         float sinTheta = sinf(theta);
-        for (int j = 0; j < sides; j++) {
+        for (size_t j = 0; j < sides; j++) {
             float phi = ((float)j / sides) * 2.0f * PI;
             float cosPhi = cosf(phi);
             float sinPhi = sinf(phi);
@@ -198,8 +198,8 @@ Mesh MyGenTorusMesh(int rings, int sides) {
             Vector3 position = (Vector3){ x, y, z };
             Vector3 normal = (Vector3){ nx, ny, nz };
 
-            int sx = WRAP_MOD((int)z, SCREEN_WIDTH);
-            int sy = WRAP_MOD((int)(SCREEN_HEIGHT - x), SCREEN_HEIGHT);
+            int sx = WRAP_MOD((int)z, MONITOR_WIDTH);
+            int sy = WRAP_MOD((int)(MONITOR_HEIGHT - x), MONITOR_HEIGHT);
 
             float height = heightmap[sy][sx];
             float adjusted_height = lower_bound + (height - min) * gradient;
@@ -210,21 +210,21 @@ Mesh MyGenTorusMesh(int rings, int sides) {
 
     char *filename = "heightmap.bin";
     if(!heightmap_exists(filename)) {
-        save_heightmap(filename, heightmap, SCREEN_HEIGHT, SCREEN_WIDTH);
+        save_heightmap(filename, heightmap, MONITOR_HEIGHT, MONITOR_WIDTH);
         printf("Heightmap saved to %s\n", filename);
     } else {
         printf("Heightmap already exists at %s, skipping save.\n", filename);
     }
-    for (int i = 0; i < SCREEN_HEIGHT; i++) {
+    for (size_t i = 0; i < MONITOR_HEIGHT; i++) {
         free(heightmap[i]);
     }
     free(heightmap);
 
 
-    for (int i = 0; i < rings; i++) {
-        int i1 = (i + 1) % rings;
-        for (int j = 0; j < sides; j++) {
-            int j1 = (j + 1) % sides;
+    for (size_t i = 0; i < rings; i++) {
+        size_t i1 = (i + 1) % rings;
+        for (size_t j = 0; j < sides; j++) {
+            size_t j1 = (j + 1) % sides;
 
             Vector3 p00 = vertexGrid[i][j];
             Vector3 p01 = vertexGrid[i][j1];
@@ -254,11 +254,11 @@ Mesh MyGenTorusMesh(int rings, int sides) {
     // 3. Generate indices (each quad = 2 triangles = 6 indices)
     int indexCount = rings * sides * 6;
     unsigned short *indices = MemAlloc(indexCount * sizeof(unsigned short)); // Use uint16 for Raylib
-    int k = 0;
-    for (int i = 0; i < rings; i++) {
-        int i1 = (i + 1) % rings;
-        for (int j = 0; j < sides; j++) {
-            int j1 = (j + 1) % sides;
+    size_t k = 0;
+    for (size_t i = 0; i < rings; i++) {
+        size_t i1 = (i + 1) % rings;
+        for (size_t j = 0; j < sides; j++) {
+            size_t j1 = (j + 1) % sides;
 
             int v00 = i * sides + j;
             int v01 = i * sides + j1;
@@ -282,9 +282,9 @@ Mesh MyGenTorusMesh(int rings, int sides) {
     Vector3 *flatNormals = MemAlloc(vertexCount * sizeof(Vector3));
     Vector2 *texcoords = MemAlloc(vertexCount * sizeof(Vector2));
 
-    for (int i = 0; i < rings; i++) {
-        for (int j = 0; j < sides; j++) {
-            int idx = i * sides + j;
+    for (size_t i = 0; i < rings; i++) {
+        for (size_t j = 0; j < sides; j++) {
+            size_t idx = i * sides + j;
             flatVertices[idx] = vertexGrid[i][j];
             flatNormals[idx] = Vector3Normalize(normalGrid[i][j]);
             texcoords[idx] = (Vector2){ (float)j / sides, (float)i / rings };
@@ -305,15 +305,15 @@ Mesh MyGenTorusMesh(int rings, int sides) {
     return mesh;
 }
 
-Mesh MyGenFlatTorusMesh(int rings, int sides) {
-    unsigned char **image = malloc(SCREEN_HEIGHT * sizeof(unsigned char *));
+Mesh MyGenFlatTorusMesh(size_t rings, size_t sides) {
+    unsigned char **image = malloc(MONITOR_HEIGHT * sizeof(unsigned char *));
     if (!image) {
         perror("malloc failed");
         exit(1);
     }
 
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        image[y] = malloc(SCREEN_WIDTH * sizeof(unsigned char));
+    for (size_t y = 0; y < MONITOR_HEIGHT; y++) {
+        image[y] = malloc(MONITOR_WIDTH * sizeof(unsigned char));
         if (!image[y]) {
             perror("malloc failed");
             exit(1);
@@ -324,8 +324,8 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
 
     float min = FLT_MIN;
     float max = -FLT_MAX;
-    for (int v = 0; v < SCREEN_HEIGHT; v++) {
-        for (int u = 0; u < SCREEN_WIDTH; u++) {
+    for (size_t v = 0; v < MONITOR_HEIGHT; v++) {
+        for (size_t u = 0; u < MONITOR_WIDTH; u++) {
             float height = heightmap[v][u];
             assert(height >= 0.0f && height <= 1.0f); // Ensure noise is in [0, 1]
             if (height < min) min = height;
@@ -341,9 +341,9 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
         exit(1);
     }
 
-    fprintf(f, "P5\n%d %d\n255\n", SCREEN_WIDTH, SCREEN_HEIGHT);  // P5 = binary greyscale
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        if (fwrite(image[y], sizeof(unsigned char), SCREEN_WIDTH, f) != SCREEN_WIDTH) {
+    fprintf(f, "P5\n%zu %zu\n255\n", MONITOR_WIDTH, MONITOR_HEIGHT);  // P5 = binary greyscale
+    for (size_t y = 0; y < MONITOR_HEIGHT; y++) {
+        if (fwrite(image[y], sizeof(unsigned char), MONITOR_WIDTH, f) != MONITOR_WIDTH) {
             perror("Error writing image data");
             fclose(f);
             exit(1);
@@ -354,39 +354,37 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
     printf("Heightmap written to heightmap_T.pgm\n");
 
     // Free the image memory
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    for (size_t y = 0; y < MONITOR_HEIGHT; y++) {
         free(image[y]);
     }
     free(image);
 
-    float upper_bound = 400.0f;
-    float lower_bound = 0.0f;
-    float gradient = (upper_bound - lower_bound) / (max - min);
-    printf("Gradient: %f\n", gradient);
-
-
     // 1. Allocate vertex and normal grids
     Vector3 **vertexGrid = MemAlloc(rings * sizeof(Vector3 *));
     Vector3 **normalGrid = MemAlloc(rings * sizeof(Vector3 *));
-    for (int i = 0; i < rings; i++) {
+    for (size_t i = 0; i < rings; i++) {
         vertexGrid[i] = MemAlloc(sides * sizeof(Vector3));
         normalGrid[i] = MemAlloc(sides * sizeof(Vector3));
-        for (int j = 0; j < sides; j++) {
+        for (size_t j = 0; j < sides; j++) {
             normalGrid[i][j] = (Vector3){0.0f, 0.0f, 0.0f};
         }
     }
 
     // 2. Fill vertexGrid with positions (and optionally sample height)
-    for (int i = 0; i < rings; i++) {
+    float upper_bound = 100.0f;
+    float lower_bound = 0.0f;
+    float gradient = (upper_bound - lower_bound) / (max - min);
+    printf("Gradient: %f\n", gradient);
+    for (size_t i = 0; i < rings; i++) {
         float theta = (float)i / rings * 2.0f * PI;
-        for (int j = 0; j < sides; j++) {
+        for (size_t j = 0; j < sides; j++) {
             float phi = (float)j / sides * 2.0f * PI;
 
-            float x = HALF_SCREEN_HEIGHT - phi * r;
-            float z = R * theta - HALF_SCREEN_WIDTH;
+            float x = HALF_MONITOR_HEIGHT - phi * r;
+            float z = R * theta - HALF_MONITOR_WIDTH;
 
-            int sx = WRAP_MOD((int)(z + HALF_SCREEN_WIDTH), SCREEN_WIDTH);
-            int sy = WRAP_MOD((int)(HALF_SCREEN_HEIGHT - x), SCREEN_HEIGHT);
+            int sx = WRAP_MOD((int)(z + HALF_MONITOR_WIDTH), MONITOR_WIDTH);
+            int sy = WRAP_MOD((int)(HALF_MONITOR_HEIGHT - x), MONITOR_HEIGHT);
 
             float height = heightmap[sy][sx];
             float adjusted_height = lower_bound + (height - min) * gradient;
@@ -397,20 +395,20 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
 
     char *filename = "heightmap.bin";
     if(!heightmap_exists(filename)) {
-        save_heightmap(filename, heightmap, SCREEN_HEIGHT, SCREEN_WIDTH);
+        save_heightmap(filename, heightmap, MONITOR_HEIGHT, MONITOR_WIDTH);
         printf("Heightmap saved to %s\n", filename);
     } else {
         printf("Heightmap already exists at %s, skipping save.\n", filename);
     }
-    for (int i = 0; i < SCREEN_HEIGHT; i++) {
+    for (size_t i = 0; i < MONITOR_HEIGHT; i++) {
         free(heightmap[i]);
     }
     free(heightmap);
 
-    for (int i = 0; i < rings; i++) {
-        int i1 = (i + 1) % rings;
-        for (int j = 0; j < sides; j++) {
-            int j1 = (j + 1) % sides;
+    for (size_t i = 0; i < rings; i++) {
+        size_t i1 = (i + 1) % rings;
+        for (size_t j = 0; j < sides; j++) {
+            size_t j1 = (j + 1) % sides;
 
             Vector3 p00 = vertexGrid[i][j];
             Vector3 p01 = vertexGrid[i][j1];
@@ -440,11 +438,11 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
     // 3. Generate indices (each quad = 2 triangles = 6 indices)
     int indexCount = rings * sides * 6;
     unsigned short *indices = MemAlloc(indexCount * sizeof(unsigned short)); // Use uint16 for Raylib
-    int k = 0;
-    for (int i = 0; i < rings - 1; i++) {
-        int i1 = i + 1;
-        for (int j = 0; j < sides - 1; j++) {
-            int j1 = j + 1;
+    size_t k = 0;
+    for (size_t i = 0; i < rings - 1; i++) {
+        size_t i1 = i + 1;
+        for (size_t j = 0; j < sides - 1; j++) {
+            size_t j1 = j + 1;
 
             int v00 = i * sides + j;
             int v01 = i * sides + j1;
@@ -468,9 +466,9 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
     Vector3 *flatNormals = MemAlloc(vertexCount * sizeof(Vector3));
     Vector2 *texcoords = MemAlloc(vertexCount * sizeof(Vector2));
 
-    for (int i = 0; i < rings; i++) {
-        for (int j = 0; j < sides; j++) {
-            int idx = i * sides + j;
+    for (size_t i = 0; i < rings; i++) {
+        for (size_t j = 0; j < sides; j++) {
+            size_t idx = i * sides + j;
             flatVertices[idx] = vertexGrid[i][j];
             flatNormals[idx] = Vector3Normalize(normalGrid[i][j]);
             texcoords[idx] = (Vector2){ (float)j / sides, (float)i / rings };
@@ -492,11 +490,11 @@ Mesh MyGenFlatTorusMesh(int rings, int sides) {
 
 
 float get_theta(float u) {
-        return 2 * PI * u / SCREEN_WIDTH;
+        return 2 * PI * u / MONITOR_WIDTH;
 }
 
 float get_phi(float v) {
-        return 2 * PI * v / SCREEN_HEIGHT;
+        return 2 * PI * v / MONITOR_HEIGHT;
 }
 
 Vector3 get_torus_normal(float u, float v) {
@@ -522,6 +520,7 @@ Vector3 get_phi_tangent(float u, float v) {
 }
 
 Vector3 get_theta_tangent(float u, float v) {
+    (void)v;  // Silences unused parameter warning
     float theta = get_theta(u);
 
     float tx = -sinf(theta);
@@ -532,6 +531,7 @@ Vector3 get_theta_tangent(float u, float v) {
 }
 
 Vector3 get_torus_position(float u, float v) {
+    (void)v;  // Silences unused parameter warning
     float theta = get_theta(u);
     float phi = get_phi(v);
 

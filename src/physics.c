@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "vehicle.h"
+
 
 static dWorldID world;
 static dSpaceID space;
@@ -21,13 +23,25 @@ typedef struct {
 
 static PhysicsObject objects[MAX_BODIES];
 
-static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
+// optionally a geom can have user data, in this case
+// the only info our user data has is if the geom
+// should collide or not
+// this allows for bodies that effect COG without
+// colliding
+bool checkColliding(dGeomID g)
+{
+    geomInfo* gi = (geomInfo*)dGeomGetData(g);
+    if (!gi) return true;
+    return gi->collidable;
+}
+
+static void nearCallbackBAK(void *data, dGeomID o1, dGeomID o2) {
     (void)data;  // Unused parameter
     dBodyID b1 = dGeomGetBody(o1);
     dBodyID b2 = dGeomGetBody(o2);
 
     dContact contact;
-    contact.surface.mode = dContactBounce | dContactApprox1;
+    contact.surface.mode = dContactSlip1 | dContactSlip2 | dContactSoftERP | dContactSoftCFM  | dContactApprox1;
     contact.surface.mu = dInfinity;
     contact.surface.bounce = 0.2;
     contact.surface.bounce_vel = 0.1;
@@ -36,6 +50,56 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) {
         dJointID c = dJointCreateContact(world, contactGroup, &contact);
         dJointAttach(c, b1, b2);
     }
+}
+
+
+// when objects potentially collide this callback is called
+// you can rule out certain collisions or use different surface parameters
+// depending what object types collide.... lots of flexibility and power here!
+#define MAX_CONTACTS 8
+
+static void nearCallback(void *data, dGeomID o1, dGeomID o2)
+{
+    (void)data;
+    int i;
+
+    // exit without doing anything if the two bodies are connected by a joint
+    dBodyID b1 = dGeomGetBody(o1);
+    dBodyID b2 = dGeomGetBody(o2);
+
+    if (b1 && b2 && dAreConnectedExcluding(b1, b2, dJointTypeContact)) {
+        return;
+    }
+
+    if (!checkColliding(o1)) return;
+    if (!checkColliding(o2)) return;
+
+    // getting these just so can sometimes be a little bit of a black art!
+    dContact contact[MAX_CONTACTS]; // up to MAX_CONTACTS contacts per body-body
+    for (i = 0; i < MAX_CONTACTS; i++) {
+        contact[i].surface.mode = dContactBounce | dContactApprox1;
+        contact[i].surface.mu = 5;
+        contact[i].surface.slip1 = 0.001;
+        contact[i].surface.slip2 = 0.001;
+        contact[i].surface.soft_erp = 0.05;
+        contact[i].surface.soft_cfm = 0.0003;
+      
+        contact[i].surface.bounce = 0.1;
+        contact[i].surface.bounce_vel = 0.1;
+
+    }
+    int numc = dCollide(o1, o2, MAX_CONTACTS, &contact[0].geom,
+                        sizeof(dContact));
+    if (numc) {
+        dMatrix3 RI;
+        dRSetIdentity(RI);
+        for (i = 0; i < numc; i++) {
+            dJointID c =
+                dJointCreateContact(world, contactGroup, contact + i);
+            dJointAttach(c, b1, b2);
+        }
+    }
+
 }
 
 // Convert Raylib Mesh to ODE TriMesh
@@ -76,7 +140,6 @@ dGeomID CreateODETriMeshFromRaylibMesh(Mesh *mesh, dSpaceID space, dTriMeshDataI
 
 void SetTerrainTriMesh(Mesh *mesh) {
     terrainGeom = CreateODETriMeshFromRaylibMesh(mesh, space, NULL);
-    dGeomSetData(terrainGeom, "terrain");
 }
 
 size_t SCREEN_WIDTH = SIZE_MAX;
@@ -151,6 +214,22 @@ void UpdatePhysics() {
     if (IsKeyPressed(KEY_SPACE)) {
         ApplyRandomJumpToAllBodies();
     }
+}
+
+void CollideBodies() {
+    dSpaceCollide(space, 0, &nearCallback);
+}
+
+dWorldID GetPhysicsWorld() {
+    return world;
+}
+
+dSpaceID GetPhysicsSpace() {
+    return space;
+}
+
+dJointGroupID GetPhysicsContactGroup() {
+    return contactGroup;
 }
 
 void ApplyRandomJumpToAllBodies() {

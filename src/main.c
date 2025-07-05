@@ -6,7 +6,7 @@
 int main(void) {
     //SetConfigFlags(FLAG_FULLSCREEN_MODE);
 
-    InitWindow(1200, 800, "Raylib Physics Example");
+    InitWindow(1600, 1200, "Raylib Physics Example");
     InitAudio();
     InitPhysics();
     InitRenderer();

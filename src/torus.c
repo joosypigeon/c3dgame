@@ -371,7 +371,7 @@ Mesh MyGenFlatTorusMesh(size_t rings, size_t sides) {
     }
 
     // 2. Fill vertexGrid with positions (and optionally sample height)
-    float upper_bound = 100.0f;
+    float upper_bound = 50.0f;
     float lower_bound = 0.0f;
     float gradient = (upper_bound - lower_bound) / (max - min);
     printf("Gradient: %f\n", gradient);
